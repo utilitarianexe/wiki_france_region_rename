@@ -10,7 +10,7 @@ def get_page_markup(page_name):
     site = pywikibot.Site()
     page = pywikibot.Page(site, page_name)
     text = page.text
-    print(text)
+    return text
 
 def list_catalog():
     pass
