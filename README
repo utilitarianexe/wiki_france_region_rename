@@ -7,3 +7,6 @@ This uses pywikibot to work. For the time being going to be pointed at test.wiki
 This can be changed in the user-config.py file.
 
 Note that this is prehaps the wrong approch to the problem in general. Maybe wikidata should be used instead but I would need to look into this.
+
+your going to need to install pywikibot and do something like
+export PYTHONPATH="${PYTHONPATH}:/home/peter/project/core/"
