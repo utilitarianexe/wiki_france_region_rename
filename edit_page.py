@@ -1,8 +1,15 @@
 '''
 This module is for editing the actual pages
 
+TODO
+get lists of other types of articles that need changed
+(finish departements, will also need communes and potentially cantons)
+edits for these
+decide how many places to edit(should we edit everything or just the boxes)
+
 chack usser talk page for updates
-decide how many places to edit
+submit for approval to edit
+see if it can update normal wikipedia
 read about wikidata
 '''
 
@@ -76,6 +83,33 @@ def edit_markup_arrondissement(article_name):
     print(new_text)
     edit_page(new_text, article_name, 'testing bot')
 
+
+def list_of_department_articles():
+    '''
+    need to get the list of all 300+ of these things
+    not to mention all the other ones we will need
+    
+    currently pulls them out of the markup of the list article on wikipedia
+    saved as a local file(we only plan on doing this once
+
+    Tried various other ways of getting a list 
+    but I think this is going to be our best effort go at this
+    '''
+    article_titles = []
+    with open('list_of_departements_table_markup') as table_file:
+        table_string = table_file.read()
+        links = re.finditer(r'\[\[File:.*\n.*\[\[(.*)\|.*\]\]|\[\[File:.*\n.*\[\[(.*)\]\]',
+                            table_string)
+        for link in links:
+            if link.group(1) is not None:
+                article_titles.append(link.group(1))
+            else:
+                article_titles.append(link.group(2))
+    print(article_titles)
+    print(len(article_titles))
+    return article_titles
+
+
 def list_of_arrondissements_articles():
     '''
     need to get the list of all 300+ of these things
@@ -102,4 +136,5 @@ if __name__ == '__main__':
     # woo finally go one to work on the test wiki
     # article_name = 'Arrondissement of Bourg-en-Bresse'
     # edit_markup_arrondissement(article_name)
-    list_of_arrondissements_articles()
+    # list_of_arrondissements_articles()
+    list_of_department_articles()
