@@ -2,11 +2,12 @@ This project will be a wikipedia bot to handle https://en.wikipedia.org/wiki/Wik
 
 Mostly using this as an opportunity to get used to existing tools for working with wikipedia.
 
-This uses pywikibot to work. For the time being going to be pointed at test.wikipedia.com and use my Lonjers user there. Will need to use a real bot account edventually but needs to be approved first.
-
-This can be changed in the user-config.py file.
+This uses pywikibot to work. You need an account to make changes and use pywikibot. 
+This can be changed in the user-config.py file. Remeber bots need approval.
 
 Note that this is prehaps the wrong approch to the problem in general. Maybe wikidata should be used instead but I would need to look into this.
 
 your going to need to install pywikibot and do something like
 export PYTHONPATH="${PYTHONPATH}:/home/peter/project/core/"
+
+Looks like I am getting all the departemtns and arrondissements

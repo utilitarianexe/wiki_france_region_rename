@@ -14,6 +14,7 @@ read about wikidata
 '''
 
 import re
+import json
 from pywikibot_wrapper import edit_page, get_page_markup
 
 
@@ -131,10 +132,76 @@ def list_of_arrondissements_articles():
     return article_titles
 
 
+def list_of_lists_of_communes():
+    article_titles = []
+    with open('list_of_lists_of_communes') as table_file:
+        table_string = table_file.read()
+        links = re.finditer(r'\[\[(Communes.*)\]\]', table_string)
+        for link in links:
+            article_titles.append(link.group(1))
+
+    return article_titles
+
+def list_of_communes_of_allier_markup():
+    '''
+    just used for testing
+    '''
+    with open('list_of_communes_of_allier_markup') as table_file:
+        return table_file.read()
+
+def communes_from_list_of_communes_markup(markup):
+    print(markup)
+    article_titles = []
+    links = re.finditer(r'\| \[\[(.*)\|.*\]\]|\| \[\[(.*)\]\]', markup)
+    for link in links:
+        if link.group(1) is not None:
+            article_titles.append(link.group(1))
+        else:
+            article_titles.append(link.group(2))
+
+    print(article_titles)
+    return article_titles
+                        
+
+def communes_from_list_of_communes(article_name):
+    '''
+    '''
+    print('getting: ' + article_name)
+    markup = get_page_markup(article_name)
+    return communes_from_list_of_communes_markup(markup)
+
+def list_of_communes_articles():
+    '''
+    hmmm kinda annoying we really need to use the actuall article for these
+    not sure if I am already at the point they will rate limit me or something
+    all I need to do is download so we will try
+    but need to use my real wiki account
+    '''
+    communes = []
+    meta_commune_list = list_of_lists_of_communes()
+    for commune_list in meta_commune_list:
+        communes = communes + communes_from_list_of_communes(commune_list)
+
+    return communes
+
+def cache_communes(communes):
+    '''
+    '''
+    json.dump(communes, open('commune_cache', 'w'))
+
+def communes_from_chache():
+    return json.load(open('commune_cache'))
+
 
 if __name__ == '__main__':
     # woo finally go one to work on the test wiki
     # article_name = 'Arrondissement of Bourg-en-Bresse'
     # edit_markup_arrondissement(article_name)
     # list_of_arrondissements_articles()
-    list_of_department_articles()
+    # list_of_department_articles()
+    #list_of_lists_of_communes()
+    # markup = list_of_communes_of_allier_markup()
+    # print(communes_from_list_of_communes_markup(markup))
+    # communes = list_of_communes_articles()
+    # cache_communes(communes)
+    print(len(communes_from_chache()))
