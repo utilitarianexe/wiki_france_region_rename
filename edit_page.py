@@ -2,14 +2,10 @@
 This module is for editing the actual pages
 
 TODO
-get lists of other types of articles that need changed
-(finish departements, will also need communes and potentially cantons)
-edits for these
-decide how many places to edit(should we edit everything or just the boxes)
-
-chack usser talk page for updates
-submit for approval to edit
-see if it can update normal wikipedia
+edit meathods for departments and communes
+better edit messages
+set up account for bot
+get approval
 read about wikidata
 '''
 
