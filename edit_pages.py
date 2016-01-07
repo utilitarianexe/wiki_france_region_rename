@@ -4,7 +4,6 @@ TODO
 final edit message
 check for errors on regexes(might need permission)
 
-set up account for bot
 get approval
 option to use wikidata property instead of simple name replacement
 (need approval for the property too)
@@ -12,11 +11,35 @@ option to use wikidata property instead of simple name replacement
 
 import re
 import json
+import mwparserfromhell
 from pywikibot_wrapper import edit_page, get_page_markup
+from config import user_name
 
 
 EDIT_PAGE_MESSAGE = ('Single page edit as testing for bot that'
                      ' is intended to handle the 2016 French region rename')
+
+def allow_bots(text, user):
+    text = mwparserfromhell.parse(text)
+    for tl in text.filter_templates():
+        if tl.name in ('nobots',):
+            break
+    else:
+        return True
+    for param in tl.params:
+        bots = [x.lower().strip() for x in param.value.split(",")]
+        if param.name == 'allow':
+            if ''.join(bots) == 'none': return False
+            for bot in bots:
+                if bot in (user, 'all'):
+                    return True
+        elif param.name == 'deny':
+            if ''.join(bots) == 'none': return True
+            for bot in bots:
+                if bot in (user, 'all'):
+                    return False
+    return False
+
 
 def region_remap(region):
     '''
@@ -60,12 +83,19 @@ def replace_region_in_text(article_text, regular_expression_pattern, dot_all=Fal
         match_object = re.search(regular_expression_pattern, article_text)
     else:
         match_object = re.search(regular_expression_pattern, article_text, re.DOTALL)
-    old_region_name = match_object.group(1)
-    if old_region_name is None:
-        old_region_name = match_object.group(2) # regs can match 2 options so need to check second
-        span_index = 2
-    else:
-        span_index = 1
+
+    if match_object is None:
+        return None, 'regular expression did not find match in article'
+
+    try:
+        old_region_name = match_object.group(1)
+        if old_region_name is None:
+            old_region_name = match_object.group(2) # regs can match 2 options so need to check second
+            span_index = 2
+        else:
+            span_index = 1
+    except IndexError:
+        return None, 'tried to get a group number higher than the number of groups in the re'
 
     if old_region_name is None:
         return None, 'could not match to first or second group'
@@ -82,6 +112,9 @@ def replace_region_in_text(article_text, regular_expression_pattern, dot_all=Fal
 def replace_region_in_article(article_name, regular_expression_pattern, actually_edit,
                               dot_all=False):
     article_text = get_page_markup(article_name)
+    if not allow_bots(article_text, user_name):
+        return 'blocked for bot edits'
+
     new_text, error = replace_region_in_text(article_text, regular_expression_pattern,
                                              dot_all=dot_all)
     if error is not None:
@@ -200,5 +233,7 @@ def fix_all_articles(actually_edit):
             break
 
 if __name__ == '__main__':
-    actually_edit = False #if false will just check regular expressions not edit page
+    #print(replace_region_in_article('Arrondissement of Marmande',r'rég=\[\[(.*)\]\]|subdivision_type1.*\[\[Regions of France\|Region\]\]\n\| subdivision_name1.*= \[\[(.*)\]\]', True))
+    actually_edit = False # if false will just check regular expressions not edit page
     fix_all_articles(actually_edit)
+

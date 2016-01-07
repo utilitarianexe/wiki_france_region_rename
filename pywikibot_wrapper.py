@@ -15,8 +15,3 @@ def get_page_markup(page_name):
 def list_catalog():
     pass
 
-
-if __name__ == '__main__':
-    get_page()
-    edit_page()
-    get_page()
