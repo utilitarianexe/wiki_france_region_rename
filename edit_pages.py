@@ -22,7 +22,7 @@ EDIT_PAGE_MESSAGE = ('Single page edit as testing for bot that'
 def allow_bots(text, user):
     text = mwparserfromhell.parse(text)
     for tl in text.filter_templates():
-        if tl.name in ('nobots',):
+        if tl.name in ('nobots', 'bots'):
             break
     else:
         return True
