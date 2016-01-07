@@ -1,13 +1,20 @@
 This project will be a wikipedia bot to handle https://en.wikipedia.org/wiki/Wikipedia:Bot_requests#New_French_regions_on_1_January.
 
+tldr: France in consolidating regions. Thousands of wikipedia articles need region names fixed as a result. This program only fixes department, commune, and arrondissement articles. I also only fixes their info boxes.
+
 Mostly using this as an opportunity to get used to existing tools for working with wikipedia.
 
 This uses pywikibot to work. You need an account to make changes and use pywikibot. 
 This can be changed in the user-config.py file. Remeber bots need approval.
 
-Note that this is prehaps the wrong approch to the problem in general. Maybe wikidata should be used instead but I would need to look into this.
+Note the way this program currently works is probably not like its final iteration will.
+This currently does simple name replaces on the region in the right infobox
+But it would be preferable to do a replace with a wiki data property link
+Waiting for approval on adding the property to wikidata
+
+Progarm is set up to only check regular expressions not run by default. To actually run change actually edit to True at the end of edit_pages.py. You will also need to turn of test_mode in user-config.py.
+
+Installation
 
 your going to need to install pywikibot and do something like
 export PYTHONPATH="${PYTHONPATH}:/home/peter/project/core/"
-
-Looks like I am getting all the departemtns and arrondissements

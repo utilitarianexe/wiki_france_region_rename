@@ -1,18 +1,22 @@
 '''
 This module is for editing the actual pages
-
 TODO
-edit meathods for departments and communes
-better edit messages
+final edit message
+check for errors on regexes(might need permission)
+
 set up account for bot
 get approval
-read about wikidata
+option to use wikidata property instead of simple name replacement
+(need approval for the property too)
 '''
 
 import re
 import json
 from pywikibot_wrapper import edit_page, get_page_markup
 
+
+EDIT_PAGE_MESSAGE = ('Single page edit as testing for bot that'
+                     ' is intended to handle the 2016 French region rename')
 
 def region_remap(region):
     '''
@@ -39,57 +43,64 @@ def region_remap(region):
                   'Corsica': 'Corsica',
                   'Île-de-France': 'Île-de-France',
                   'Pays de la Loire': 'Pays de la Loire',
-                  "Provence-Alpes-Côte d'Azur": "Provence-Alpes-Côte d'Azur",
-              }
-    return old_to_new.get(region, None)
+                  "Provence-Alpes-Côte d'Azur": "Provence-Alpes-Côte d'Azur",}
 
+    if region in old_to_new.values():
+        return None, 'previously_changed'
+    new_region = old_to_new.get(region, None)
 
-def fix_region_text(old_text):
-    region_name = old_text[6:-2]
-    new_region = region_remap(region_name)
     if new_region is None:
-        return None, 'failed to find region'
-    new_text = old_text[:6] + new_region + ']]' #TODO format
-    return new_text, None
+        return None, 'old region name not found for {}'.format(region)
+    else:
+        return new_region, None
 
-def replace_region_in_text(text):
-    pattern = r'rég=\[\[.*\]\]'
-    match = re.search(pattern, text)
-    if match is None:
-        return None, 'could not find location to fix'
-    text_to_fix = match.group(0) #TODO what if for than one match
-    fixed_text, error = fix_region_text(text_to_fix)
-    if error is not None:
+
+def replace_region_in_text(article_text, regular_expression_pattern, dot_all=False):
+    if not dot_all:
+        match_object = re.search(regular_expression_pattern, article_text)
+    else:
+        match_object = re.search(regular_expression_pattern, article_text, re.DOTALL)
+    old_region_name = match_object.group(1)
+    if old_region_name is None:
+        old_region_name = match_object.group(2) # regs can match 2 options so need to check second
+        span_index = 2
+    else:
+        span_index = 1
+
+    if old_region_name is None:
+        return None, 'could not match to first or second group'
+    new_region_name, error = region_remap(old_region_name)
+    if error is not  None:
         return None, error
-    start_index, end_index = match.span()
-    new_text = '{start_text}{new_text}{end_text}'.format(start_text=text[:start_index],
-                                                         new_text=fixed_text,
-                                                         end_text=text[end_index:])
+    start_index, end_index = match_object.span(span_index)
+    new_text = '{start_text}{new_text}{end_text}'.format(start_text=article_text[:start_index],
+                                                         new_text=new_region_name,
+                                                         end_text=article_text[end_index:])
     return new_text, None
 
-def edit_markup_arrondissement(article_name):
-    '''
-    So the idea is going to be being conservative at first doing a pure info box edit
-    '''
+
+def replace_region_in_article(article_name, regular_expression_pattern, actually_edit,
+                              dot_all=False):
     article_text = get_page_markup(article_name)
-    new_text, error = replace_region_in_text(article_text)
+    new_text, error = replace_region_in_text(article_text, regular_expression_pattern,
+                                             dot_all=dot_all)
     if error is not None:
-        print(error)
-        return
+        return error
 
-    print(new_text)
-    edit_page(new_text, article_name, 'testing bot')
+    if actually_edit:
+        edit_page(new_text, article_name, EDIT_PAGE_MESSAGE)
 
+    return None
 
 def list_of_department_articles():
     '''
     need to get the list of all 300+ of these things
     not to mention all the other ones we will need
-    
+
     currently pulls them out of the markup of the list article on wikipedia
     saved as a local file(we only plan on doing this once
 
-    Tried various other ways of getting a list 
+    Tried various other ways of getting a list
     but I think this is going to be our best effort go at this
     '''
     article_titles = []
@@ -102,22 +113,9 @@ def list_of_department_articles():
                 article_titles.append(link.group(1))
             else:
                 article_titles.append(link.group(2))
-    print(article_titles)
-    print(len(article_titles))
     return article_titles
 
-
 def list_of_arrondissements_articles():
-    '''
-    need to get the list of all 300+ of these things
-    not to mention all the other ones we will need
-    
-    currently pulls them out of the markup of the list article on wikipedia
-    saved as a local file(we only plan on doing this once
-
-    Tried various other ways of getting a list 
-    but I think this is going to be our best effort go at this
-    '''
     article_titles = []
     with open('list_of_arrondissements_table_markup') as table_file:
         table_string = table_file.read()
@@ -126,7 +124,6 @@ def list_of_arrondissements_articles():
             article_title = link[2:link.index('|')]
             article_titles.append(article_title)
     return article_titles
-
 
 def list_of_lists_of_communes():
     article_titles = []
@@ -138,15 +135,7 @@ def list_of_lists_of_communes():
 
     return article_titles
 
-def list_of_communes_of_allier_markup():
-    '''
-    just used for testing
-    '''
-    with open('list_of_communes_of_allier_markup') as table_file:
-        return table_file.read()
-
 def communes_from_list_of_communes_markup(markup):
-    print(markup)
     article_titles = []
     links = re.finditer(r'\| \[\[(.*)\|.*\]\]|\| \[\[(.*)\]\]', markup)
     for link in links:
@@ -155,24 +144,14 @@ def communes_from_list_of_communes_markup(markup):
         else:
             article_titles.append(link.group(2))
 
-    print(article_titles)
     return article_titles
-                        
 
 def communes_from_list_of_communes(article_name):
-    '''
-    '''
     print('getting: ' + article_name)
     markup = get_page_markup(article_name)
     return communes_from_list_of_communes_markup(markup)
 
 def list_of_communes_articles():
-    '''
-    hmmm kinda annoying we really need to use the actuall article for these
-    not sure if I am already at the point they will rate limit me or something
-    all I need to do is download so we will try
-    but need to use my real wiki account
-    '''
     communes = []
     meta_commune_list = list_of_lists_of_communes()
     for commune_list in meta_commune_list:
@@ -181,23 +160,45 @@ def list_of_communes_articles():
     return communes
 
 def cache_communes(communes):
-    '''
-    '''
     json.dump(communes, open('commune_cache', 'w'))
 
 def communes_from_chache():
     return json.load(open('commune_cache'))
 
+def fix_articles_of_type(list_function, regular_expression_pattern, actually_edit,
+                         dot_all=False):
+    for article in list_function():
+        print('attempting to edit {}'.format(article))
+        error = replace_region_in_article(article, regular_expression_pattern, actually_edit,
+                                          dot_all=dot_all)
+        if error is not None:
+            if error == 'previously_changed':
+                message = '{} already has a new region it is being skipped'
+                message = message.format(article)
+                print(message)
+                continue
+            else:
+                message = 'some kind of fatal error handling: {} : stopping all editing: {}'
+                message = message.format(article, error)
+                return message
+    return None
+
+def fix_all_articles(actually_edit):
+    commune_regex = r'\{\{Infobox French commune.*\|region.*= (.*)\n\|department'
+    department_regex = r'subdivision_type1.*\[\[Regions of France\|Region\]\]\n\| subdivision_name1.*= \[\[(.*)\]\]'
+    arrondissement_regex = r'rég=\[\[(.*)\]\]|subdivision_type1.*\[\[Regions of France\|Region\]\]\n\| subdivision_name1.*= \[\[(.*)\]\]'
+    
+
+    article_fixers = [[list_of_arrondissements_articles, arrondissement_regex, False],
+                      [list_of_department_articles, department_regex, False],
+                      [communes_from_chache, commune_regex, True]]
+    for article_fixer in article_fixers:
+        error = fix_articles_of_type(article_fixer[0], article_fixer[1], actually_edit,
+                                     dot_all=article_fixer[2])
+        if error is not None:
+            print(error)
+            break
 
 if __name__ == '__main__':
-    # woo finally go one to work on the test wiki
-    # article_name = 'Arrondissement of Bourg-en-Bresse'
-    # edit_markup_arrondissement(article_name)
-    # list_of_arrondissements_articles()
-    # list_of_department_articles()
-    #list_of_lists_of_communes()
-    # markup = list_of_communes_of_allier_markup()
-    # print(communes_from_list_of_communes_markup(markup))
-    # communes = list_of_communes_articles()
-    # cache_communes(communes)
-    print(len(communes_from_chache()))
+    actually_edit = False #if false will just check regular expressions not edit page
+    fix_all_articles(actually_edit)

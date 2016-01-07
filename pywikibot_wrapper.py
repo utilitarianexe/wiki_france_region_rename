@@ -16,9 +16,6 @@ def list_catalog():
     pass
 
 
-def test():
-    print('hi')
-
 if __name__ == '__main__':
     get_page()
     edit_page()
