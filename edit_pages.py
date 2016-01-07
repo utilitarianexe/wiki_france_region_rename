@@ -20,6 +20,9 @@ EDIT_PAGE_MESSAGE = ('Single page edit as testing for bot that'
                      ' is intended to handle the 2016 French region rename')
 
 def allow_bots(text, user):
+    '''
+    Returns True if bots allowed to edit page false otherwise
+    '''
     text = mwparserfromhell.parse(text)
     for tl in text.filter_templates():
         if tl.name in ('nobots', 'bots'):
@@ -45,6 +48,10 @@ def region_remap(region):
     '''
     Note 6 of the regions are staying the same
     '''
+    #handle specific case where normal article name is not used
+    if region == 'Auvergne (region)|Auvergne':
+        region = 'Auvergne'
+
     old_to_new = {'Burgundy': 'Bourgogne-Franche-Comté',
                   'Franche-Comté': 'Bourgogne-Franche-Comté',
                   'Aquitaine': 'Aquitaine-Limousin-Poitou-Charentes',
@@ -180,7 +187,6 @@ def communes_from_list_of_communes_markup(markup):
     return article_titles
 
 def communes_from_list_of_communes(article_name):
-    print('getting: ' + article_name)
     markup = get_page_markup(article_name)
     return communes_from_list_of_communes_markup(markup)
 
@@ -199,8 +205,10 @@ def communes_from_chache():
     return json.load(open('commune_cache'))
 
 def fix_articles_of_type(list_function, regular_expression_pattern, actually_edit,
-                         dot_all=False):
-    for article in list_function():
+                         dot_all=False, max_pages_to_run_on_per_type=None):
+    for i, article in enumerate(list_function()):
+        if i > max_pages_to_run_on_per_type:
+            break
         print('attempting to edit {}'.format(article))
         error = replace_region_in_article(article, regular_expression_pattern, actually_edit,
                                           dot_all=dot_all)
@@ -216,7 +224,7 @@ def fix_articles_of_type(list_function, regular_expression_pattern, actually_edi
                 return message
     return None
 
-def fix_all_articles(actually_edit):
+def fix_all_articles(actually_edit, max_pages_to_run_on_per_type=None):
     commune_regex = r'\{\{Infobox French commune.*\|region.*= (.*)\n\|department'
     department_regex = r'subdivision_type1.*\[\[Regions of France\|Region\]\]\n\| subdivision_name1.*= \[\[(.*)\]\]'
     arrondissement_regex = r'rég=\[\[(.*)\]\]|subdivision_type1.*\[\[Regions of France\|Region\]\]\n\| subdivision_name1.*= \[\[(.*)\]\]'
@@ -227,13 +235,15 @@ def fix_all_articles(actually_edit):
                       [communes_from_chache, commune_regex, True]]
     for article_fixer in article_fixers:
         error = fix_articles_of_type(article_fixer[0], article_fixer[1], actually_edit,
-                                     dot_all=article_fixer[2])
+                                     dot_all=article_fixer[2],
+                                     max_pages_to_run_on_per_type=max_pages_to_run_on_per_type)
         if error is not None:
             print(error)
             break
 
 if __name__ == '__main__':
-    #print(replace_region_in_article('Arrondissement of Marmande',r'rég=\[\[(.*)\]\]|subdivision_type1.*\[\[Regions of France\|Region\]\]\n\| subdivision_name1.*= \[\[(.*)\]\]', True))
-    actually_edit = False # if false will just check regular expressions not edit page
-    fix_all_articles(actually_edit)
+    # print(replace_region_in_article('Arrondissement of Gex',
+    #                                 r'rég=\[\[(.*)\]\]|subdivision_type1.*\[\[Regions of France\|Region\]\]\n\| subdivision_name1.*= \[\[(.*)\]\]',
+    #                                 False))
+    fix_all_articles(False, max_pages_to_run_on_per_type=50)
 
