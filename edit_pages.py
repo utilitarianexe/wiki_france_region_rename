@@ -11,8 +11,11 @@ option to use wikidata property instead of simple name replacement
 
 import re
 import json
+import time
+
 import mwparserfromhell
 from pywikibot_wrapper import edit_page, get_page_markup
+
 from config import user_name
 
 
@@ -204,9 +207,10 @@ def cache_communes(communes):
 def communes_from_chache():
     return json.load(open('commune_cache'))
 
-def fix_articles_of_type(list_function, regular_expression_pattern, actually_edit,
+def fix_articles_of_type(list_function, regular_expression_pattern, actually_edit, sleep_time,
                          dot_all=False, max_pages_to_run_on_per_type=None):
-    for i, article in enumerate(list_function()):
+    for i, article in enumerate(list_function()[10000:]):
+        time.sleep(sleep_time)
         if i > max_pages_to_run_on_per_type:
             break
         print('attempting to edit {}'.format(article))
@@ -221,10 +225,12 @@ def fix_articles_of_type(list_function, regular_expression_pattern, actually_edi
             else:
                 message = 'some kind of fatal error handling: {} : stopping all editing: {}'
                 message = message.format(article, error)
-                return message
+                print(message)
+                continue
+                #return message
     return None
 
-def fix_all_articles(actually_edit, max_pages_to_run_on_per_type=None):
+def fix_all_articles(actually_edit, sleep_time, max_pages_to_run_on_per_type=None):
     commune_regex = r'\{\{Infobox French commune.*\|region.*= (.*)\n\|department'
     department_regex = r'subdivision_type1.*\[\[Regions of France\|Region\]\]\n\| subdivision_name1.*= \[\[(.*)\]\]'
     arrondissement_regex = r'rég=\[\[(.*)\]\]|subdivision_type1.*\[\[Regions of France\|Region\]\]\n\| subdivision_name1.*= \[\[(.*)\]\]'
@@ -233,17 +239,34 @@ def fix_all_articles(actually_edit, max_pages_to_run_on_per_type=None):
     article_fixers = [[list_of_arrondissements_articles, arrondissement_regex, False],
                       [list_of_department_articles, department_regex, False],
                       [communes_from_chache, commune_regex, True]]
+
+    
     for article_fixer in article_fixers:
         error = fix_articles_of_type(article_fixer[0], article_fixer[1], actually_edit,
+                                     sleep_time,
                                      dot_all=article_fixer[2],
                                      max_pages_to_run_on_per_type=max_pages_to_run_on_per_type)
         if error is not None:
             print(error)
             break
 
+def fix_commune_first_sentences(actually_edit, max_pages_to_run_on_per_type, sleep_time):
+    commune_regex = r"\{\{Infobox French commune.*\}\}\n{1,2}'''.*''' is a French \[\[Communes of France\|commune\]\].*in the \[\[(.*)\]\] region.*\.\n"
+    error = fix_articles_of_type(communes_from_chache, commune_regex,
+                                 actually_edit,
+                                 sleep_time,
+                                 dot_all=True,
+                                 max_pages_to_run_on_per_type=max_pages_to_run_on_per_type)
+    if error is not None:
+        print(error)
+
+
+
+
 if __name__ == '__main__':
     # print(replace_region_in_article('Arrondissement of Gex',
     #                                 r'rég=\[\[(.*)\]\]|subdivision_type1.*\[\[Regions of France\|Region\]\]\n\| subdivision_name1.*= \[\[(.*)\]\]',
     #                                 False))
-    fix_all_articles(False, max_pages_to_run_on_per_type=50)
+    #fix_all_articles(False, 0.5, max_pages_to_run_on_per_type=50)
+    fix_commune_first_sentences(False, 1, 0.5)
 
