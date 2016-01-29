@@ -45,6 +45,7 @@ def allow_bots(text, user):
                 if bot in (user, 'all'):
                     return False
     return False
+
 def list_of_lists_of_communes():
     article_titles = []
     with open('list_of_lists_of_communes') as table_file:
@@ -156,26 +157,6 @@ def fix_articles_of_type(list_function, regular_expression_pattern, actually_edi
                 #return message
     return None
 
-def fix_all_articles(actually_edit, sleep_time, max_pages_to_run_on_per_type=None):
-    commune_regex = r'\{\{Infobox French commune.*\|region.*= (.*)\n\|department'
-    department_regex = r'subdivision_type1.*\[\[Regions of France\|Region\]\]\n\| subdivision_name1.*= \[\[(.*)\]\]'
-    arrondissement_regex = r'rég=\[\[(.*)\]\]|subdivision_type1.*\[\[Regions of France\|Region\]\]\n\| subdivision_name1.*= \[\[(.*)\]\]'
-    
-
-    article_fixers = [[list_of_arrondissements_articles, arrondissement_regex, False],
-                      [list_of_department_articles, department_regex, False],
-                      [communes_from_chache, commune_regex, True]]
-
-    
-    for article_fixer in article_fixers:
-        error = fix_articles_of_type(article_fixer[0], article_fixer[1], actually_edit,
-                                     sleep_time,
-                                     dot_all=article_fixer[2],
-                                     max_pages_to_run_on_per_type=max_pages_to_run_on_per_type)
-        if error is not None:
-            print(error)
-            break
-
 
 def remove_region_from_commune_info_boxes(actually_edit, max_pages_to_run_on_per_type, sleep_time):
     commune_regex = r'\{\{Infobox French commune.*(\|region.*=.*\n)\|department'
@@ -186,8 +167,6 @@ def remove_region_from_commune_info_boxes(actually_edit, max_pages_to_run_on_per
                                  max_pages_to_run_on_per_type=max_pages_to_run_on_per_type)
     if error is not None:
         print(error)
-
-
 
 
 if __name__ == '__main__':
