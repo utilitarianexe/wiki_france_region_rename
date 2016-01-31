@@ -19,8 +19,8 @@ from pywikibot_wrapper import edit_page, get_page_markup
 from config import user_name
 
 
-EDIT_PAGE_MESSAGE = ('Single page edit as testing for bot that'
-                     ' removes unused region parameter from templace to prevent confusion')
+EDIT_PAGE_MESSAGE = ('Remove unused region and department parameters from templace'
+                     ' to prevent confusion')
 
 def allow_bots(text, user):
     '''
@@ -159,7 +159,7 @@ def fix_articles_of_type(list_function, regular_expression_pattern, actually_edi
 
 
 def remove_region_from_commune_info_boxes(actually_edit, max_pages_to_run_on_per_type, sleep_time):
-    commune_regex = r'\{\{Infobox French commune.*(\|region.*=.*\n)\|department'
+    commune_regex = r'\{\{Infobox French commune.*(\|region.*=.*\n\|department\s*= \S*\n)\|.*\|INSEE'
     error = fix_articles_of_type(communes_from_chache, commune_regex,
                                  actually_edit,
                                  sleep_time,
@@ -171,8 +171,8 @@ def remove_region_from_commune_info_boxes(actually_edit, max_pages_to_run_on_per
 
 if __name__ == '__main__':
     remove_region_from_commune_info_boxes(False, 50, 0.5)
+    # commune_regex = r'\{\{Infobox French commune.*(\|region.*=.*\n\|department\s*= \S*\n)\|.*\|INSEE'
     # article_name = 'Ancelle'
-    # commune_regex = r'\{\{Infobox French commune.*(\|region.*=.*\n)\|department'
     # print(replace_region_in_article(article_name, commune_regex, True,
     #                                 dot_all=True))
 
