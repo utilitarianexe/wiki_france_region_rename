@@ -12,6 +12,7 @@ option to use wikidata property instead of simple name replacement
 import re
 import json
 import time
+import random
 
 import mwparserfromhell
 from pywikibot_wrapper import edit_page, get_page_markup
@@ -19,8 +20,8 @@ from pywikibot_wrapper import edit_page, get_page_markup
 from config import user_name
 
 
-EDIT_PAGE_MESSAGE = ('Remove unused region and department parameters from templace'
-                     ' to prevent confusion')
+EDIT_PAGE_MESSAGE = ('Remove unused region and department parameters from [[Template:Infobox French commune]] '
+                     ' to prevent confusion INSEE field is used now. See [[Wikipedia:Bots/Requests_for_approval/Lonjers_french_region_rename_bot]]')
 
 def allow_bots(text, user):
     '''
@@ -83,8 +84,20 @@ def list_of_communes_articles():
 def cache_communes(communes):
     json.dump(communes, open('commune_cache', 'w'))
 
+def cache_edit_list(edited_articles):
+    json.dump(edited_articles, open('edited_articles', 'w'))
+
+def get_edit_list():
+    return json.load(open('edited_articles'))
+
 def communes_from_chache():
     return json.load(open('commune_cache'))
+
+def randomize_cache():
+    communes = communes_from_chache()
+    random.shuffle(communes)
+    print(len(communes))
+    cache_communes(communes)
 
 
 def replace_region_in_text(article_text, regular_expression_pattern, dot_all=False):
@@ -107,6 +120,7 @@ def replace_region_in_text(article_text, regular_expression_pattern, dot_all=Fal
     except IndexError:
         return None, 'tried to get a group number higher than the number of groups in the re'
 
+    print(old_region_name)
     if old_region_name is None:
         return None, 'could not match to first or second group'
 
@@ -119,6 +133,16 @@ def replace_region_in_text(article_text, regular_expression_pattern, dot_all=Fal
 
 def replace_region_in_article(article_name, regular_expression_pattern, actually_edit,
                               dot_all=False):
+    # needed because
+    # One of the lists of communes is formated such that both
+    # the communes and the catons of the department are picked up
+    # so we neeed to skip the Canton articels
+    # finally a few of the communes are only historical communes and lack the info box
+    # a few others also are already edited
+    # note these still get added to the article list
+    articles_to_skip = ['Saint Barthélemy', 'Acoua']
+    if article_name[:6] == 'Canton' or article_name in articles_to_skip:
+        return None
     article_text = get_page_markup(article_name)
     if not allow_bots(article_text, user_name):
         return 'blocked for bot edits'
@@ -135,14 +159,24 @@ def replace_region_in_article(article_name, regular_expression_pattern, actually
 
 
 def fix_articles_of_type(list_function, regular_expression_pattern, actually_edit, sleep_time,
-                         dot_all=False, max_pages_to_run_on_per_type=None):
-    for i, article in enumerate(list_function()[10000:]):
+                         dot_all=False, max_pages_to_run_on_per_type=None,
+                         number_to_skip=0,
+                         edited_articles=None):
+    articles = list_function()
+    for i, article in enumerate(articles[number_to_skip:]):
         time.sleep(sleep_time)
-        if i > max_pages_to_run_on_per_type:
+        if i >= max_pages_to_run_on_per_type:
             break
+
+        if article in edited_articles:
+            print('attempting to edit an article already edited aborting this should never happen')
+            break
+
         print('attempting to edit {}'.format(article))
         error = replace_region_in_article(article, regular_expression_pattern, actually_edit,
                                           dot_all=dot_all)
+        if error is None:
+            edited_articles.append(article)
         if error is not None:
             if error == 'previously_changed':
                 message = '{} already has a new region it is being skipped'
@@ -153,24 +187,32 @@ def fix_articles_of_type(list_function, regular_expression_pattern, actually_edi
                 message = 'some kind of fatal error handling: {} : stopping all editing: {}'
                 message = message.format(article, error)
                 print(message)
-                continue
-                #return message
-    return None
+                break
+
+    return edited_articles
 
 
-def remove_region_from_commune_info_boxes(actually_edit, max_pages_to_run_on_per_type, sleep_time):
-    commune_regex = r'\{\{Infobox French commune.*(\|region.*=.*\n\|department\s*= \S*\n)\|.*\|INSEE'
-    error = fix_articles_of_type(communes_from_chache, commune_regex,
-                                 actually_edit,
-                                 sleep_time,
-                                 dot_all=True,
-                                 max_pages_to_run_on_per_type=max_pages_to_run_on_per_type)
-    if error is not None:
-        print(error)
+def remove_region_from_commune_info_boxes(actually_edit, max_pages_to_run_on_per_type,
+                                          sleep_time, number_to_skip):
+    commune_regex = r'\{\{Infobox French commune.*(\|region.*=.*\n\|department\s*= [^\n]*\n)\|.*\|'
+    only_department_regex = r'\{\{Infobox French commune.*(\|department\s*= [^\n]*\n)\|.*\|'
+    commune_regex = commune_regex + '|' + only_department_regex
+    edited_articles = get_edit_list()
+    edited_articles = fix_articles_of_type(communes_from_chache, commune_regex,
+                                           actually_edit,
+                                           sleep_time,
+                                           dot_all=True,
+                                           max_pages_to_run_on_per_type=max_pages_to_run_on_per_type,
+                                           number_to_skip=number_to_skip,
+                                           edited_articles=edited_articles)
+    cache_edit_list(edited_articles)
+    
 
 
 if __name__ == '__main__':
-    remove_region_from_commune_info_boxes(False, 50, 0.5)
+    remove_region_from_commune_info_boxes(True, 4, 0.5, 76)
+    print(len(get_edit_list()))
+    #randomize_cache()
     # commune_regex = r'\{\{Infobox French commune.*(\|region.*=.*\n\|department\s*= \S*\n)\|.*\|INSEE'
     # article_name = 'Ancelle'
     # print(replace_region_in_article(article_name, commune_regex, True,
