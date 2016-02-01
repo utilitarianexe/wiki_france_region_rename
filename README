@@ -6,7 +6,9 @@ Mostly using this as an opportunity to get used to existing tools for working wi
 This uses pywikibot to work. You need an account to make changes and use pywikibot. 
 This can be changed in the user-config.py file. Remeber bots need approval. Currently uses my personal wikipedia account but this will be changed when activated.
 
-Originally this was meant to do something more  complicated. But now just removes the unused region paramter from english wikipedia articles about french communes that is no longer used.
+Originally this was meant to do something more  complicated. But now just removes the unused region and department paramters from english wikipedia articles about french communes that is no longer used.
+
+Bot has been approved for testing.
 
 also going to need to do the folloing but replace the path with your path to pywikibot
 export PYTHONPATH="${PYTHONPATH}:/home/peter/project/core/"
